@@ -1,95 +1,73 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { updatePosts } from "./GlobalRedux/Features/Posts/postSlice";
 import styles from "./page.module.css";
-
+const API_URL = "https://jsonplaceholder.typicode.com/posts";
+const PAGE_LIMIT = 10;
+const REFRESH_TIME = 5000;
 export default function Home() {
+  const postsList = useSelector((state) => state.posts.postsList);
+  const [filteredData, setFilteredData] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [dataRefreshAt, setDataRefreshAt] = useState(0);
+  const dispatch = useDispatch();
+  const fetchPost = async () => {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+      dispatch(updatePosts(data));
+      setFilteredData(data.slice(0, PAGE_LIMIT));
+      setDataRefreshAt(new Date().getTime());
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    const startIndexOfPostList = (currentPage - 1) * PAGE_LIMIT;
+    setFilteredData(postsList.slice(startIndexOfPostList, startIndexOfPostList + PAGE_LIMIT));
+  }, [currentPage]);
+
+  const previousPage = () => {
+    setCurrentPage((prev) => (prev - 1 > 0 ? prev - 1 : prev));
+  };
+
+  const nextPage = () => {
+    const totalPages = postsList.length / PAGE_LIMIT;
+    setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+  };
+
+  const refreshFeed = () => {
+    if (new Date().getTime() - dataRefreshAt > REFRESH_TIME) {
+      fetchPost();
+    }
+  };
+  useEffect(() => {
+    fetchPost();
+  }, []);
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className={styles.container}>
+      <button className={styles.btn} onClick={refreshFeed}>
+        Refresh Feed
+      </button>
+      {filteredData.map((item) => (
+        <div className={styles.postItem}>
+          <h3 className={styles.id}>ID-{item.id}</h3>
+          <p className={styles.title}>Title-{item.title}</p>
+        </div>
+      ))}
+      <div className={styles.paginationContainer}>
+        <div className={styles.pagination}>
+          <button className={styles.btn} onClick={previousPage}>
+            Previous
+          </button>
+          <p>1</p>
+          <button className={styles.btn} onClick={nextPage}>
+            Next
+          </button>
         </div>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
 }
